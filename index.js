@@ -5,7 +5,7 @@ const express = require("express");
 const app = express();
 
 app.get("/", (req, res) => {
-  res.send("Hello World");
+  res.send("Nothing to see here...");
 });
 
 var server = app.listen(process.env.PORT || 5000, () => {
