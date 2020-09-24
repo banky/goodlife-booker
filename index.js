@@ -12,7 +12,7 @@ var server = app.listen(process.env.PORT || 5000, () => {
   var host = server.address().address;
   var port = server.address().port;
 
-  console.log("Example app listening at http://%s:%s", host, port);
+  console.log("App listening at http://%s:%s", host, port);
 });
 
 const username = process.env.BANKY_USERNAME;
@@ -32,7 +32,6 @@ const getNextTimeToTry = () => {
 const main = async () => {
   if (timeout !== undefined) clearTimeout(timeout);
 
-  console.log(dayjs().format());
   const today = dayjs().day();
   const shouldBookToday = daysOfWeekToBook.some(
     (dayOfWeekToBook) => dayOfWeekToBook === today
@@ -110,6 +109,7 @@ const main = async () => {
       const retryTime = 1000 * 60 * 1;
       console.log("Trying again in one minute. Retries: ", retries);
       timeout = setTimeout(main, retryTime);
+      return;
     }
     retries = 5;
     console.log("Trying again tomorrow");
