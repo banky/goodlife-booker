@@ -32,6 +32,7 @@ const getNextTimeToTry = () => {
 const main = async () => {
   if (timeout !== undefined) clearTimeout(timeout);
 
+  console.log(dayjs().format());
   const today = dayjs().day();
   const shouldBookToday = daysOfWeekToBook.some(
     (dayOfWeekToBook) => dayOfWeekToBook === today
@@ -107,9 +108,11 @@ const main = async () => {
     if (retries > 0) {
       retries = retries - 1;
       const retryTime = 1000 * 60 * 1;
+      console.log("Trying again in one minute. Retries: ", retries);
       timeout = setTimeout(main, retryTime);
     }
     retries = 5;
+    console.log("Trying again tomorrow");
     timeout = setTimeout(main, getNextTimeToTry());
   }
 };
