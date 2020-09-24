@@ -1,6 +1,19 @@
 const axios = require("axios");
 const FormData = require("form-data");
 const dayjs = require("dayjs");
+const express = require("express");
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("Hello World");
+});
+
+var server = app.listen(process.env.PORT || 5000, () => {
+  var host = server.address().address;
+  var port = server.address().port;
+
+  console.log("Example app listening at http://%s:%s", host, port);
+});
 
 const username = process.env.BANKY_USERNAME;
 const password = process.env.BANKY_PASSWORD;
@@ -8,6 +21,7 @@ const password = process.env.BANKY_PASSWORD;
 const CLUB_ID = 268; // Richmond and John location
 const daysOfWeekToBook = [1, 2, 4, 5];
 let timeout = undefined;
+let retries = 5;
 
 // Get a time early tomorrow to try
 const getNextTimeToTry = () => {
@@ -90,9 +104,13 @@ const main = async () => {
     timeout = setTimeout(main, getNextTimeToTry());
   } catch (error) {
     console.log("error: ", error.response.data);
-    const fiveMinutes = 1000 * 60 * 5;
-
-    timeout = setTimeout(main, fiveMinutes);
+    if (retries > 0) {
+      retries = retries - 1;
+      const retryTime = 1000 * 60 * 1;
+      timeout = setTimeout(main, retryTime);
+    }
+    retries = 5;
+    timeout = setTimeout(main, getNextTimeToTry());
   }
 };
 
