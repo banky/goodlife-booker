@@ -118,3 +118,8 @@ const main = async () => {
 };
 
 main();
+
+// Run something every hour to keep heroku dyno alive
+setInterval(() => {
+  console.log("Keeping dyno alive");
+}, 1000 * 60 * 60);
