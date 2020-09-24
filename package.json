@@ -1,0 +1,16 @@
+{
+  "name": "goodlife-booker",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:banky/goodlife-booker.git",
+  "author": "bankya <bankiadebajo1@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.20.0",
+    "dayjs": "^1.8.36",
+    "form-data": "^3.0.0"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}
