@@ -121,5 +121,7 @@ main();
 
 // Run something every hour to keep heroku dyno alive
 setInterval(() => {
-  console.log("Keeping dyno alive");
+  axios
+    .get("https://goodlife-booker.herokuapp.com")
+    .then(() => console.log("Keeping dyno alive"));
 }, 1000 * 60 * 5);
