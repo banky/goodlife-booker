@@ -15,13 +15,75 @@ var server = app.listen(process.env.PORT || 5000, () => {
   console.log("App listening at http://%s:%s", host, port);
 });
 
-const username = process.env.BANKY_USERNAME;
-const password = process.env.BANKY_PASSWORD;
-
 const CLUB_ID = 268; // Richmond and John location
 const daysOfWeekToBook = [1, 2, 4, 5];
 let timeout = undefined;
 let retries = 5;
+
+const login = async (username, password) => {
+  const formData = new FormData();
+  formData.append("Login", username);
+  formData.append("Password", password);
+
+  const loginResponse = await axios.post(
+    "https://www.goodlifefitness.com/memberauth/authenticate",
+    formData,
+    {
+      headers: formData.getHeaders(),
+    }
+  );
+
+  const cookies = loginResponse.headers["set-cookie"];
+  const formattedCookie = cookies.reduce((acc, curr) => {
+    // +2 to include the semicolon and space
+    const cookieValue = curr.substr(0, curr.indexOf(";") + 2);
+    return acc + cookieValue;
+  }, "");
+
+  return formattedCookie;
+};
+
+const getBookingSlots = async (day, clubId, cookie) => {
+  const response = await axios.get(
+    `https://www.goodlifefitness.com/club-occupancy/club-workout-schedule?club=${clubId}&day=${day.format(
+      "YYYY-MM-DD"
+    )}&studio=Gym%20Floor`,
+    {
+      headers: {
+        cookie: cookie,
+      },
+    }
+  );
+
+  if (response.data.length === 0) {
+    return Promise.reject("No slots available today");
+  }
+
+  const bookingSlots = Object.values(response.data).reduce((acc, curr) => {
+    return [...acc, ...curr];
+  }, []);
+
+  return bookingSlots;
+};
+
+const makeBooking = async (clubId, timeslotId, cookie) => {
+  const bookingFormData = new FormData();
+  bookingFormData.append("ClubId", clubId);
+  bookingFormData.append("TimeSlotId", timeslotId);
+
+  const bookingResponse = await axios.post(
+    "https://www.goodlifefitness.com/club-occupancy/book",
+    bookingFormData,
+    {
+      headers: {
+        ...bookingFormData.getHeaders(),
+        cookie: cookie,
+      },
+    }
+  );
+
+  return bookingResponse.data;
+};
 
 // Get a time early tomorrow to try
 const getNextTimeToTry = () => {
@@ -45,65 +107,31 @@ const main = async () => {
   }
 
   try {
-    const formData = new FormData();
-    formData.append("Login", username);
-    formData.append("Password", password);
-
-    // Login
-    const loginResponse = await axios.post(
-      "https://www.goodlifefitness.com/memberauth/authenticate",
-      formData,
-      {
-        headers: formData.getHeaders(),
-      }
+    const cookie = await login(
+      process.env.BANKY_USERNAME,
+      process.env.BANKY_PASSWORD
     );
-
-    const cookies = loginResponse.headers["set-cookie"];
-    const formattedCookie = cookies.reduce((acc, curr) => {
-      const cookieValue = curr.substr(0, curr.indexOf(";") + 2); // +2 to include the semicolon and space
-      return acc + cookieValue;
-    }, "");
-
-    console.log("Logged in successfully");
 
     const nextWeek = dayjs().add(7, "day");
+    const bookingSlots = await getBookingSlots(nextWeek, CLUB_ID, cookie);
 
-    // Get bookings
-    const response = await axios.get(
-      `https://www.goodlifefitness.com/club-occupancy/club-workout-schedule?club=268&day=${nextWeek.format(
-        "YYYY-MM-DD"
-      )}&studio=Gym%20Floor`,
-      {
-        headers: {
-          cookie: formattedCookie,
-        },
-      }
-    );
-
-    const targetBooking = response.data.MorningList.filter(
+    const targetBookingSlots = bookingSlots.filter(
       (booking) => booking.StartAtDisplay === "7:30AM"
-    )[0];
-
-    const bookingFormData = new FormData();
-    bookingFormData.append("ClubId", CLUB_ID);
-    bookingFormData.append("TimeSlotId", targetBooking.Id);
-
-    const bookingResponse = await axios.post(
-      "https://www.goodlifefitness.com/club-occupancy/book",
-      bookingFormData,
-      {
-        headers: {
-          ...bookingFormData.getHeaders(),
-          cookie: formattedCookie,
-        },
-      }
     );
 
-    console.log("bookingResponse: ", bookingResponse.data);
+    if (targetBookingSlots.length === 0) {
+      throw new Error("No slot available at the specified time");
+    }
+
+    const timeslotId = targetBookingSlots[0].id;
+    await makeBooking(CLUB_ID, timeslotId, cookie);
 
     timeout = setTimeout(main, getNextTimeToTry());
   } catch (error) {
-    console.log("error: ", error.response.data);
+    if (error.response) {
+      console.log("error: ", error.response.data);
+    }
+
     if (retries > 0) {
       retries = retries - 1;
       const retryTime = 1000 * 60 * 1;
@@ -119,7 +147,7 @@ const main = async () => {
 
 main();
 
-// Run something every hour to keep heroku dyno alive
+// Hit app every 5 minutes to keep heroku dyno alive
 setInterval(() => {
   axios
     .get("https://goodlife-booker.herokuapp.com")
