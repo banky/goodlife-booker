@@ -123,13 +123,15 @@ const main = async () => {
       throw new Error("No slot available at the specified time");
     }
 
-    const timeslotId = targetBookingSlots[0].id;
+    const timeslotId = targetBookingSlots[0].Id;
     await makeBooking(CLUB_ID, timeslotId, cookie);
 
     timeout = setTimeout(main, getNextTimeToTry());
   } catch (error) {
     if (error.response) {
       console.log("error: ", error.response.data);
+    } else {
+      console.log("error: ", error);
     }
 
     if (retries > 0) {
