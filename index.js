@@ -87,7 +87,7 @@ const makeBooking = async (clubId, timeslotId, cookie) => {
 
 // Get a time early tomorrow to try
 const getNextTimeToTry = () => {
-  const nextTimeToTry = dayjs().startOf("day").add(30, "second").add(1, "day");
+  const nextTimeToTry = dayjs().startOf("day").add(5, "second").add(1, "day");
   return nextTimeToTry.valueOf() - dayjs().valueOf();
 };
 
@@ -136,8 +136,8 @@ const main = async () => {
 
     if (retries > 0) {
       retries = retries - 1;
-      const retryTime = 1000 * 60 * 1;
-      console.log("Trying again in one minute. Retries: ", retries);
+      const retryTime = 1000 * 10;
+      console.log("Trying again in ten seconds. Retries: ", retries);
       timeout = setTimeout(main, retryTime);
       return;
     }
